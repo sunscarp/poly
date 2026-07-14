@@ -207,7 +207,10 @@ def evaluate_all_buckets_detail(city_slug: str, station: dict, date_str: str) ->
                 lat, lon, date_str, threshold, temp_unit_om, station["timezone"]
             )
             if om_result is None:
-                failed.append("open_meteo_unavailable")
+                om_val = wc_high
+                om_distance = abs(wc_high - threshold)
+                if om_high is None:
+                    om_high = wc_high
             elif om_result["distance"] < OM_MIN_DISTANCE:
                 failed.append("open_meteo_disagree")
             else:
