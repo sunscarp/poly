@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>NO Paper Trader</title>
+<style>
+  :root {
+    --bg: #0a0e17;
+    --surface: #111827;
+    --surface2: #1a2234;
+    --border: #1e2d45;
+    --text: #e2e8f0;
+    --text-dim: #64748b;
+    --accent: #22d3ee;
+    --green: #22c55e;
+    --red: #ef4444;
+    --yellow: #eab308;
+    --purple: #a78bfa;
+    --orange: #f97316;
+    --cyan: #06b6d4;
+    --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    --mono: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font); line-height: 1.5; }
+  .container { max-width: 1600px; margin: 0 auto; padding: 16px 20px; }
+
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 12px;
+    padding: 12px 0; margin-bottom: 16px; border-bottom: 1px solid var(--border);
+  }
+  .topbar-left { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .topbar-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .topbar h1 { font-size: 1.1rem; font-weight: 700; letter-spacing: 0.5px; white-space: nowrap; }
+  .topbar h1 span { color: var(--red); }
+  .mode-badge {
+    display: inline-block; background: rgba(249,115,22,0.12); color: var(--orange);
+    padding: 3px 10px; border-radius: 6px; font-size: 0.68rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 1px; border: 1px solid rgba(249,115,22,0.25);
+  }
+  .bankroll-bar {
+    font-family: var(--mono); font-size: 0.82rem; color: var(--text-dim);
+    display: flex; align-items: center; gap: 4px;
+  }
+  .bankroll-bar .total { color: var(--text); font-weight: 600; }
+  .bankroll-bar .deployed { color: var(--orange); }
+  .bankroll-bar .free { color: var(--green); }
+
+  .pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 6px;
+    padding: 3px 10px; font-family: var(--mono); font-size: 0.7rem; color: var(--text-dim);
+    white-space: nowrap;
+  }
+  .pill .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .pill .dot.green { background: var(--green); }
+  .pill .dot.yellow { background: var(--yellow); }
+  .pill .dot.red { background: var(--red); animation: pulse 1s infinite; }
+  .pill .dot.purple { background: var(--purple); }
+  .pill .dot.orange { background: var(--orange); }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; background: var(--green); animation: pulse 2s infinite; }
+  .status-dot.offline { background: var(--red); animation: none; }
+
+  .section-title {
+    font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1.5px;
+    color: var(--text-dim); margin: 20px 0 10px 0; padding-bottom: 6px;
+    border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px;
+  }
+  .section-title .dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  .panel {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; margin-bottom: 14px; overflow-x: auto;
+  }
+  .panel h2 {
+    font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--text-dim); margin-bottom: 12px; padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  .panels-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+  @media (max-width: 1000px) { .panels-2col { grid-template-columns: 1fr; } }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.76rem; }
+  th {
+    text-align: left; padding: 6px 8px; color: var(--text-dim);
+    font-weight: 600; font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border); white-space: nowrap; cursor: pointer;
+    user-select: none;
+  }
+  th:hover { color: var(--text); }
+  td {
+    padding: 6px 8px; border-bottom: 1px solid var(--border);
+    font-family: var(--mono); font-size: 0.74rem; white-space: nowrap;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr.data-row:hover td { background: var(--surface2); }
+  tr.data-row { cursor: pointer; }
+  .expanded-row td { padding: 0 8px 12px 8px; border-bottom: 1px solid var(--border); }
+  .expanded-content {
+    background: var(--surface2); border-radius: 6px; padding: 12px; margin-top: 4px;
+    font-size: 0.72rem; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  }
+  .expanded-content .sparkline { grid-column: 1 / -1; }
+
+  .badge {
+    display: inline-block; padding: 2px 7px; border-radius: 4px;
+    font-size: 0.64rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px;
+  }
+  .badge-hold { background: rgba(100,116,139,0.15); color: var(--text-dim); }
+  .badge-tighten { background: rgba(249,115,22,0.15); color: var(--orange); }
+  .badge-wait { background: rgba(234,179,8,0.15); color: var(--yellow); }
+  .badge-sell { background: rgba(239,68,68,0.15); color: var(--red); }
+  .badge-new { background: rgba(34,211,238,0.15); color: var(--accent); }
+  .badge-drift { background: rgba(245,158,11,0.15); color: #f59e0b; }
+  .badge-win { background: rgba(34,197,94,0.15); color: var(--green); }
+  .badge-loss { background: rgba(239,68,68,0.15); color: var(--red); }
+  .badge-fail { background: rgba(239,68,68,0.1); color: var(--red); font-size: 0.62rem; }
+  .badge-pass { background: rgba(34,197,94,0.1); color: var(--green); font-size: 0.62rem; }
+
+  .pnl-pos { color: var(--green); }
+  .pnl-neg { color: var(--red); }
+  .text-dim { color: var(--text-dim); }
+  .text-sm { font-size: 0.68rem; }
+  .mono { font-family: var(--mono); }
+  .empty { text-align: center; padding: 30px 16px; color: var(--text-dim); font-size: 0.8rem; }
+
+  .filter-bar {
+    display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; align-items: center;
+  }
+  .filter-bar select, .filter-bar input {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 6px;
+    color: var(--text); font-family: var(--mono); font-size: 0.72rem;
+    padding: 4px 8px; outline: none;
+  }
+  .filter-bar select:focus, .filter-bar input:focus { border-color: var(--accent); }
+
+  .alert-strip {
+    background: rgba(245,158,11,0.06); border: 1px solid rgba(245,158,11,0.2);
+    border-radius: 10px; padding: 12px 16px; margin-bottom: 14px;
+  }
+  .alert-strip h2 { color: #f59e0b; }
+  .alert-row {
+    display: flex; gap: 12px; padding: 5px 0; border-bottom: 1px solid rgba(245,158,11,0.1);
+    font-size: 0.74rem; align-items: center;
+  }
+  .alert-row:last-child { border-bottom: none; }
+
+  .refresh-bar {
+    position: fixed; top: 0; left: 0; height: 2px; background: var(--accent);
+    transition: width 0.3s ease; z-index: 100;
+  }
+  .sparkline-canvas { width: 100%; height: 40px; }
+</style>
+</head>
+<body>
+
+<div class="refresh-bar" id="refreshBar"></div>
+
+<div class="container">
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <h1>WEATHER <span>NO</span> PAPER TRADER <span class="mode-badge" id="modeBadge">PAPER</span></h1>
+      <div class="bankroll-bar" id="bankrollBar">Loading...</div>
+    </div>
+    <div class="topbar-right">
+      <div class="pill" id="regionPill"><span class="dot yellow"></span><span id="regionText">--</span></div>
+      <div class="pill"><span class="dot purple"></span>Scan <span id="scanCountdown">--</span></div>
+      <div class="pill"><span class="dot green" id="monitorDot"></span>Monitor <span id="monitorCountdown">--</span></div>
+      <div class="pill" id="alertPill"><span class="dot orange"></span>Alerts <span id="alertCount">0</span></div>
+      <span class="pill"><span class="status-dot" id="statusDot"></span><span id="statusText">Connected</span></span>
+    </div>
+  </div>
+
+  <!-- OPEN POSITIONS -->
+  <div class="section-title">
+    <span class="dot" style="background:var(--accent);"></span> Open Positions
+    <span class="text-dim text-sm" id="posCount"></span>
+  </div>
+  <div class="panel" style="padding:0; overflow-x:auto;">
+    <table id="posTable">
+      <thead>
+        <tr>
+          <th data-sort="city_slug">City</th>
+          <th data-sort="bucket">Bucket</th>
+          <th data-sort="bet_size">Bet</th>
+          <th data-sort="entry_no_price">NO Entry</th>
+          <th data-sort="current_no_price">NO Now</th>
+          <th data-sort="pnl_pct">P/L%</th>
+          <th data-sort="wc_high">WC High</th>
+          <th data-sort="om_high">OM High</th>
+          <th data-sort="metar_temp">METAR</th>
+          <th data-sort="metar_vs_wc">METAR vs WC</th>
+          <th data-sort="metar_distance">Dist→Bucket</th>
+          <th data-sort="trend">Trend</th>
+          <th data-sort="state">State</th>
+          <th data-sort="age_secs">Age</th>
+        </tr>
+      </thead>
+      <tbody id="posBody"></tbody>
+    </table>
+    <div class="empty" id="posEmpty" style="display:none;">No open positions</div>
+  </div>
+
+  <!-- ALERTS STRIP -->
+  <div class="alert-strip" id="alertStrip" style="display:none;">
+    <h2 style="font-size:0.75rem;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Forecast Drift Alerts</h2>
+    <div id="alertBody"></div>
+  </div>
+
+  <!-- SIGNALS + EVENTS -->
+  <div class="panels-2col">
+    <div class="panel">
+      <h2>Recent Signals (Not Traded) <span class="text-dim text-sm" id="sigCount"></span></h2>
+      <div id="sigBody" style="max-height:360px;overflow-y:auto;"></div>
+    </div>
+    <div class="panel">
+      <h2>Event Log <span class="text-dim text-sm" id="evtCount"></span></h2>
+      <div class="filter-bar">
+        <select id="evtFilterCity"><option value="">All Cities</option></select>
+        <select id="evtFilterAction"><option value="">All Actions</option></select>
+      </div>
+      <div id="evtBody" style="max-height:400px;overflow-y:auto;"></div>
+    </div>
+  </div>
+
+  <!-- FULL SCAN -->
+  <div class="section-title">
+    <span class="dot" style="background:var(--purple);"></span> Full Scan
+    <span class="text-dim text-sm" id="scanCount"></span>
+  </div>
+  <div class="panel" style="padding:0; overflow-x:auto; max-height:380px; overflow-y:auto;">
+    <table id="scanTable">
+      <thead style="position:sticky;top:0;z-index:1;background:var(--surface);">
+        <tr>
+          <th>City</th>
+          <th>Bucket</th>
+          <th>YES Price</th>
+          <th>NO Price</th>
+          <th>Volume</th>
+          <th>WC High</th>
+        </tr>
+      </thead>
+      <tbody id="scanBody"></tbody>
+    </table>
+    <div class="empty" id="scanEmpty" style="display:none;">No scan data yet</div>
+  </div>
+
+  <!-- SCAN LOG -->
+  <div class="section-title">
+    <span class="dot" style="background:var(--orange);"></span> Scan Log
+    <span class="text-dim text-sm" id="logCount"></span>
+    <select id="logFilterType" class="text-sm" style="background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:2px 6px;margin-left:8px;font-size:0.7rem;">
+      <option value="">All</option>
+      <option value="city_scan">Scans</option>
+      <option value="position_monitor">Monitoring</option>
+      <option value="position_opened">Opened</option>
+      <option value="position_closed">Closed</option>
+    </select>
+  </div>
+  <div class="panel" id="logPanel" style="max-height:400px;overflow-y:auto;">
+    <div class="empty" id="logEmpty">No scan log yet</div>
+    <div id="logBody"></div>
+  </div>
+</div>
+
+<script>
+const REFRESH_MS = 15000;
+let _scanTargetEpoch = 0;
+let _monitorTargetEpoch = 0;
+let _consecutiveFails = 0;
+let sortCol = "metar_distance";
+let sortAsc = true;
+let expandedRow = null;
+
+function $(id) { return document.getElementById(id); }
+function num(v, d) { return v != null ? Number(v).toFixed(d || 1) : '--'; }
+function pnlClass(v) { return v >= 0 ? 'pnl-pos' : 'pnl-neg'; }
+function pnlStr(v) { return (v >= 0 ? '+' : '') + '$' + Math.abs(v).toFixed(2); }
+
+function fmtAge(secs) {
+  if (!secs || secs < 0) return '--';
+  if (secs < 60) return secs + 's';
+  if (secs < 3600) return Math.floor(secs/60) + 'm';
+  if (secs < 86400) return Math.floor(secs/3600) + 'h' + Math.floor((secs%3600)/60) + 'm';
+  return Math.floor(secs/86400) + 'd';
+}
+
+function shortTime(iso) {
+  if (!iso) return '--';
+  try { return new Date(iso).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'}); }
+  catch(e) { return iso.slice(11,19); }
+}
+
+function stateBadge(state) {
+  const map = {
+    hold: 'badge-hold', tighten: 'badge-tighten', wait_for_stop: 'badge-wait',
+    sell_take_profit: 'badge-sell', sell_stop_loss: 'badge-sell',
+    sell_daily_high_conflict: 'badge-sell', sell_metar_at_bucket: 'badge-sell',
+    forecast_drift: 'badge-drift', new: 'badge-new',
+  };
+  const label = (state || 'new').replace(/_/g, ' ');
+  return '<span class="badge ' + (map[state] || 'badge-new') + '">' + label + '</span>';
+}
+
+function trendArrow(trend) {
+  if (trend === 'up') return '<span style="color:var(--green);">&#9650;</span>';
+  if (trend === 'down') return '<span style="color:var(--red);">&#9660;</span>';
+  return '<span style="color:var(--text-dim);">&#9644;</span>';
+}
+
+function filterBadge(failed) {
+  if (!failed || !failed.length) return '<span class="badge badge-pass">PASS</span>';
+  return failed.map(function(f) { return '<span class="badge badge-fail">' + f + '</span>'; }).join(' ');
+}
+
+function drawSparkline(canvas, data) {
+  if (!canvas || !data || !data.length) return;
+  var ctx = canvas.getContext('2d');
+  var w = canvas.width = canvas.offsetWidth * 2;
+  var h = canvas.height = 80;
+  ctx.clearRect(0, 0, w, h);
+  var mn = Math.min.apply(null, data) - 1;
+  var mx = Math.max.apply(null, data) + 1;
+  var range = mx - mn || 1;
+  var step = w / (data.length - 1 || 1);
+  ctx.strokeStyle = '#22d3ee';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  data.forEach(function(v, i) {
+    var x = i * step;
+    var y = h - ((v - mn) / range) * (h - 10) - 5;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(34,211,238,0.1)';
+  ctx.lineTo(w, h);
+  ctx.lineTo(0, h);
+  ctx.fill();
+}
+
+function renderPositions(positions) {
+  var tbody = $('posBody');
+  var empty = $('posEmpty');
+  if (!positions || !positions.length) {
+    tbody.innerHTML = '';
+    empty.style.display = '';
+    $('posTable').style.display = 'none';
+    $('posCount').textContent = '';
+    return;
+  }
+  empty.style.display = 'none';
+  $('posTable').style.display = '';
+  $('posCount').textContent = '(' + positions.length + ')';
+
+  var sorted = positions.slice().sort(function(a, b) {
+    var va = a[sortCol], vb = b[sortCol];
+    if (va == null) va = 999;
+    if (vb == null) vb = 999;
+    if (typeof va === 'string') { va = va.toLowerCase(); vb = (vb || '').toLowerCase(); }
+    if (va < vb) return sortAsc ? -1 : 1;
+    if (va > vb) return sortAsc ? 1 : -1;
+    return 0;
+  });
+
+  var html = '';
+  for (var idx = 0; idx < sorted.length; idx++) {
+    var p = sorted[idx];
+    var city = (p.city_slug || '').toUpperCase();
+    var bucket;
+    if (p.bucket_low === -999) bucket = '\u2264' + p.bucket_high;
+    else if (p.bucket_high === 999) bucket = '\u2265' + p.bucket_low;
+    else bucket = p.bucket_low + '-' + p.bucket_high;
+    var pnl = p.pnl_pct || 0;
+    var metarDist = p.metar_distance != null ? num(p.metar_distance) : '--';
+    var wcHigh = p.wc_high != null ? num(p.wc_high) : '--';
+    var omHigh = p.om_high != null ? num(p.om_high) : '--';
+    var metar = p.metar_temp != null ? num(p.metar_temp) : '--';
+    var mvw = p.metar_vs_wc != null ? (p.metar_vs_wc > 0 ? '+' : '') + num(p.metar_vs_wc) : '--';
+    var mvwColor = p.metar_vs_wc != null ? (p.metar_vs_wc > 0 ? 'var(--red)' : 'var(--green)') : 'var(--text-dim)';
+    var entryNO = p.entry_no_price != null ? num(p.entry_no_price, 3) : '--';
+    var curNO = p.current_no_price != null ? num(p.current_no_price, 3) : entryNO;
+    var mismatch = p.bet_mismatch ? ' <span style="color:var(--red);font-size:0.6rem;">MISMATCH</span>' : '';
+
+    html += '<tr class="data-row" data-idx="' + idx + '" onclick="toggleExpand(' + idx + ')">';
+    html += '<td style="font-weight:600;">' + city + '</td>';
+    html += '<td>' + bucket + '</td>';
+    html += '<td>$' + num(p.bet_size, 2) + mismatch + '</td>';
+    html += '<td>$' + entryNO + '</td>';
+    html += '<td style="font-weight:600;">$' + curNO + '</td>';
+    html += '<td class="' + pnlClass(pnl) + '">' + (pnl > 0 ? '+' : '') + num(pnl) + '%</td>';
+    html += '<td style="color:var(--cyan);">' + wcHigh + '</td>';
+    html += '<td style="color:var(--purple);">' + omHigh + '</td>';
+    html += '<td>' + metar + '</td>';
+    html += '<td style="color:' + mvwColor + ';">' + mvw + '</td>';
+    html += '<td style="color:' + (p.dist_color || 'var(--text-dim)') + ';font-weight:600;">' + metarDist + '\u00b0</td>';
+    html += '<td>' + trendArrow(p.trend) + '</td>';
+    html += '<td>' + stateBadge(p.state) + '</td>';
+    html += '<td class="text-dim">' + fmtAge(p.age_secs) + '</td>';
+    html += '</tr>';
+
+    var changeStr = '--';
+    if (p.current_no_price && p.entry_no_price && p.entry_no_price > 0) {
+      var chg = (p.current_no_price / p.entry_no_price - 1) * 100;
+      changeStr = '<span class="' + pnlClass(chg) + '">' + (chg > 0 ? '+' : '') + num(chg) + '%</span>';
+    }
+    html += '<tr class="expanded-row" id="expand-' + idx + '" style="display:none;">';
+    html += '<td colspan="14"><div class="expanded-content">';
+    html += '<div><b>Distance History (METAR\u2192Threshold)</b><br><canvas class="sparkline-canvas" id="spark-' + idx + '"></canvas></div>';
+    html += '<div><b>Entry Signal</b><br>';
+    html += '<span class="text-dim">WC High:</span> ' + num(p.wc_high_at_entry) + ' &middot; ';
+    html += '<span class="text-dim">OM High:</span> ' + num(p.om_high_at_entry) + ' &middot; ';
+    html += '<span class="text-dim">Dist:</span> ' + num(p.distance_at_entry) + '\u00b0<br>';
+    html += '<span class="text-dim">NO Entry:</span> $' + entryNO + ' &middot; ';
+    html += '<span class="text-dim">NO Now:</span> <b>$' + curNO + '</b> &middot; ';
+    html += '<span class="text-dim">Change:</span> ' + changeStr + '<br>';
+    html += '<span class="text-dim">Question:</span> <span style="font-size:0.68rem;">' + (p.question || '') + '</span><br>';
+    html += '<span class="text-dim">Reason:</span> ' + (p.reason || '--');
+    html += '</div></div></td></tr>';
+  }
+  tbody.innerHTML = html;
+  if (expandedRow !== null) {
+    var el = $('expand-' + expandedRow);
+    if (el) el.style.display = '';
+  }
+}
+
+function toggleExpand(idx) {
+  var el = $('expand-' + idx);
+  if (!el) return;
+  if (el.style.display === 'none') {
+    if (expandedRow !== null) {
+      var prev = $('expand-' + expandedRow);
+      if (prev) prev.style.display = 'none';
+    }
+    el.style.display = '';
+    expandedRow = idx;
+    var canvas = $('spark-' + idx);
+    if (canvas) {
+      var positions = window._lastPositions || [];
+      if (idx < positions.length) {
+        var pos = positions[idx];
+        if (pos && pos.metar_distances && pos.metar_distances.length > 1) {
+          setTimeout(function() { drawSparkline(canvas, pos.metar_distances); }, 50);
+        }
+      }
+    }
+  } else {
+    el.style.display = 'none';
+    expandedRow = null;
+  }
+}
+
+function renderSignals(signals) {
+  var body = $('sigBody');
+  $('sigCount').textContent = signals ? '(' + signals.length + ')' : '';
+  if (!signals || !signals.length) {
+    body.innerHTML = '<div class="empty">No near-miss signals</div>';
+    return;
+  }
+  var html = '';
+  var limit = Math.min(signals.length, 50);
+  for (var i = 0; i < limit; i++) {
+    var s = signals[i];
+    var city = (s.city_slug || '').toUpperCase();
+    var bucket;
+    if (s.bucket_range[0] === -999) bucket = '\u2264' + s.bucket_range[1];
+    else if (s.bucket_range[1] === 999) bucket = '\u2265' + s.bucket_range[0];
+    else bucket = s.bucket_range[0] + '-' + s.bucket_range[1];
+    html += '<div style="display:grid;grid-template-columns:70px 70px 1fr auto;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:0.72rem;align-items:center;">';
+    html += '<span style="font-weight:600;">' + city + '</span>';
+    html += '<span class="text-dim">' + bucket + '\u00b0</span>';
+    html += '<span>dist=' + num(s.distance) + '\u00b0 NO@$' + num(s.no_price, 3) + ' vol=$' + num(s.volume, 0) + '</span>';
+    html += '<span>' + filterBadge(s.failed_filters) + '</span>';
+    html += '</div>';
+  }
+  body.innerHTML = html;
+}
+
+function renderEvents(events, cityFilter, actionFilter) {
+  var body = $('evtBody');
+  if (!events || !events.length) {
+    body.innerHTML = '<div class="empty">No events yet</div>';
+    $('evtCount').textContent = '';
+    return;
+  }
+  var filtered = events;
+  if (cityFilter) filtered = filtered.filter(function(e) { return (e.city_slug || '').toLowerCase() === cityFilter.toLowerCase(); });
+  if (actionFilter) filtered = filtered.filter(function(e) { return (e.action || e.exit_reason || '').indexOf(actionFilter) >= 0; });
+  $('evtCount').textContent = '(' + filtered.length + ')';
+
+  var html = '';
+  for (var i = 0; i < filtered.length; i++) {
+    var e = filtered[i];
+    var city = (e.city_slug || '').toUpperCase();
+    var ts = shortTime(e.ts);
+    var detail = '';
+    if (e.type === 'exit') {
+      var pnl = e.pnl || 0;
+      detail = '<span class="badge ' + (pnl >= 0 ? 'badge-win' : 'badge-loss') + '">SELL</span> PnL: <span class="' + pnlClass(pnl) + '">' + pnlStr(pnl) + '</span> <span class="text-dim">' + (e.exit_reason || '').replace(/_/g, ' ') + '</span>';
+    } else {
+      var parts = [];
+      if (e.metar_temp != null) parts.push('METAR <b>' + num(e.metar_temp) + '</b>');
+      if (e.wc_high != null) parts.push('WC <b>' + num(e.wc_high) + '</b>');
+      if (e.metar_distance != null) parts.push('dist=' + num(e.metar_distance));
+      if (e.closing_in) parts.push('<span style="color:var(--orange);">CLOSING</span>');
+      if (e.pnl_pct != null) parts.push('<span class="' + pnlClass(e.pnl_pct) + '">' + (e.pnl_pct > 0 ? '+' : '') + num(e.pnl_pct) + '%</span>');
+      if (e.action) parts.push(stateBadge(e.action));
+      if (e.reason) parts.push('<span class="text-dim text-sm">' + e.reason + '</span>');
+      detail = parts.join(' \u00b7 ');
+    }
+    html += '<div style="display:grid;grid-template-columns:65px 65px 1fr;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:0.72rem;">';
+    html += '<span class="text-dim">' + ts + '</span>';
+    html += '<span style="font-weight:600;">' + city + '</span>';
+    html += '<span>' + detail + '</span>';
+    html += '</div>';
+  }
+  body.innerHTML = html;
+
+  var cities = [];
+  var seen = {};
+  for (var j = 0; j < events.length; j++) {
+    var c = events[j].city_slug;
+    if (c && !seen[c]) { seen[c] = 1; cities.push(c); }
+  }
+  cities.sort();
+  var sel = $('evtFilterCity');
+  var cur = sel.value;
+  var opts = '<option value="">All Cities</option>';
+  for (var k = 0; k < cities.length; k++) {
+    opts += '<option value="' + cities[k] + '"' + (cities[k] === cur ? ' selected' : '') + '>' + cities[k].toUpperCase() + '</option>';
+  }
+  sel.innerHTML = opts;
+}
+
+function renderAlerts(alerts) {
+  var strip = $('alertStrip');
+  var body = $('alertBody');
+  if (!alerts || !alerts.length) { strip.style.display = 'none'; return; }
+  strip.style.display = '';
+  var html = '';
+  var items = alerts.slice(-10).reverse();
+  for (var i = 0; i < items.length; i++) {
+    var a = items[i];
+    var city = (a.city_slug || '').toUpperCase();
+    html += '<div class="alert-row">';
+    html += '<span class="text-dim">' + shortTime(a.ts) + '</span>';
+    html += '<span style="font-weight:600;">' + city + '</span>';
+    html += '<span>' + a.bucket_low + '-' + a.bucket_high + '</span>';
+    html += '<span style="color:#f59e0b;">WC ' + num(a.old_high) + ' \u2192 ' + num(a.new_high) + ' (' + (a.shift > 0 ? '+' : '') + num(a.shift) + '\u00b0)</span>';
+    html += '</div>';
+  }
+  body.innerHTML = html;
+}
+
+function renderFullScan(data) {
+  var tbody = $('scanBody');
+  var empty = $('scanEmpty');
+  if (!data || !data.length) {
+    tbody.innerHTML = '';
+    empty.style.display = '';
+    $('scanTable').style.display = 'none';
+    $('scanCount').textContent = '';
+    return;
+  }
+  empty.style.display = 'none';
+  $('scanTable').style.display = '';
+  $('scanCount').textContent = '(' + data.length + ')';
+
+  var grouped = {};
+  for (var i = 0; i < data.length; i++) {
+    var s = data[i];
+    var city = (s.city_slug || '').toUpperCase();
+    if (!grouped[city]) grouped[city] = [];
+    grouped[city].push(s);
+  }
+
+  var keys = Object.keys(grouped).sort();
+  var html = '';
+  for (var k = 0; k < keys.length; k++) {
+    var city = keys[k];
+    var buckets = grouped[city];
+    for (var j = 0; j < buckets.length; j++) {
+      var b = buckets[j];
+      var bucket;
+      if (b.bucket_range[0] === -999) bucket = '\u2264' + b.bucket_range[1];
+      else if (b.bucket_range[1] === 999) bucket = '\u2265' + b.bucket_range[0];
+      else bucket = b.bucket_range[0] + '-' + b.bucket_range[1];
+      html += '<tr>';
+      html += '<td style="font-weight:600;">' + city + '</td>';
+      html += '<td>' + bucket + '\u00b0</td>';
+      html += '<td>$' + num(b.yes_price, 3) + '</td>';
+      html += '<td>$' + num(b.no_price, 3) + '</td>';
+      html += '<td>$' + num(b.volume, 0) + '</td>';
+      html += '<td style="color:var(--cyan);">' + (b.wc_high != null ? num(b.wc_high) : '--') + '</td>';
+      html += '</tr>';
+    }
+  }
+  tbody.innerHTML = html;
+}
+
+function renderScanLog(log, typeFilter) {
+  var body = $('logBody');
+  var empty = $('logEmpty');
+  if (!log || !log.length) {
+    body.innerHTML = '';
+    empty.style.display = '';
+    $('logCount').textContent = '';
+    return;
+  }
+
+  var filtered = typeFilter ? log.filter(function(e) { return e.type === typeFilter; }) : log;
+
+  empty.style.display = filtered.length ? 'none' : '';
+  $('logCount').textContent = '(' + filtered.length + ')';
+
+  var html = '';
+  for (var i = filtered.length - 1; i >= 0; i--) {
+    var e = filtered[i];
+    var ts = shortTime(e.ts);
+    var line = '';
+    if (e.type === 'scan_summary') {
+      line = '<span class="badge badge-new">SCAN</span> ';
+      line += '<b>' + e.cities_scanned + '</b> cities &middot; ';
+      line += '<span style="color:var(--green);">' + e.signals_found + ' signals</span> &middot; ';
+      line += '<span class="text-dim">' + e.near_misses + ' near-miss</span> &middot; ';
+      line += '<span class="text-dim">' + e.full_scan_buckets + ' buckets</span> &middot; ';
+      line += '$' + num(e.balance, 2) + ' bal &middot; ';
+      line += '<span style="color:var(--cyan);">' + e.positions_open + ' open</span>';
+      html += '<div style="display:grid;grid-template-columns:55px 1fr;gap:6px;padding:3px 0;border-bottom:1px solid var(--border);font-size:0.7rem;">';
+      html += '<span class="text-dim">' + ts + '</span>';
+      html += '<span>' + line + '</span>';
+      html += '</div>';
+    } else if (e.type === 'city_scan') {
+      var city = (e.city || '').toUpperCase();
+      var unit = e.unit || 'F';
+      var icon = e.signal ? '<span style="color:var(--green);">&#10003;</span>' : '<span style="color:var(--text-dim);">&#10007;</span>';
+
+      html += '<div style="padding:4px 0 3px;border-bottom:1px solid var(--border);font-size:0.7rem;">';
+      html += '<div style="display:grid;grid-template-columns:55px 1fr;gap:6px;">';
+      html += '<span class="text-dim">' + ts + '</span>';
+      html += '<span>';
+      html += icon + ' <b>' + city + '</b> ';
+      html += '<span class="text-dim">' + (e.date || '') + '</span>';
+      html += '</span></div>';
+
+      html += '<div style="display:grid;grid-template-columns:55px 1fr;gap:6px;margin-top:1px;">';
+      html += '<span class="text-dim"></span>';
+      html += '<span style="color:var(--cyan);font-size:0.68rem;">WC ' + num(e.wc_high) + unit;
+      if (e.om_high != null) html += ' \u00b7 OM ' + num(e.om_high) + unit;
+      html += ' \u00b7 <span class="text-dim">' + (e.passed_count || 0) + '/' + (e.active_buckets || 0) + ' passed</span>';
+      html += '</span></div>';
+
+      if (e.signal) {
+        html += '<div style="display:grid;grid-template-columns:55px 1fr;gap:6px;margin-top:1px;">';
+        html += '<span class="text-dim"></span>';
+        html += '<span style="color:var(--green);font-size:0.68rem;">SIGNAL ' + (e.signal_bucket ? e.signal_bucket[0] + '-' + e.signal_bucket[1] : '?') + unit;
+        html += ' dist=' + num(e.signal_distance);
+        html += ' NO@$' + num(e.signal_no_price, 3);
+        html += ' \u00b7 thresh=' + num(e.signal_threshold) + unit;
+        if (e.signal_om_distance != null) html += ' \u00b7 OM=' + num(e.signal_om_distance);
+        html += '</span></div>';
+      }
+
+      if (e.near_misses && e.near_misses.length) {
+        var showMisses = e.near_misses.slice(0, 4);
+        for (var j = 0; j < showMisses.length; j++) {
+          var nm = showMisses[j];
+          html += '<div style="display:grid;grid-template-columns:55px 1fr;gap:6px;margin-top:1px;">';
+          html += '<span class="text-dim"></span>';
+          html += '<span style="font-size:0.66rem;">';
+          html += '<span class="text-dim">' + (nm.range ? nm.range[0] + '-' + nm.range[1] : '?') + '</span>';
+          html += ' d=' + num(nm.distance) + ' NO@$' + num(nm.no_price, 3);
+          if (nm.om_distance != null) html += ' OM=' + num(nm.om_distance);
+          html += ' <span style="color:var(--red);">' + (nm.failed_filters || []).join(', ') + '</span>';
+          html += '</span></div>';
+        }
+        if (e.near_misses.length > 4) {
+          html += '<div style="display:grid;grid-template-columns:55px 1fr;gap:6px;margin-top:1px;">';
+          html += '<span class="text-dim"></span>';
+          html += '<span class="text-dim" style="font-size:0.64rem;">+' + (e.near_misses.length - 4) + ' more</span></div>';
+        }
+      }
+
+      html += '</div>';
+    } else if (e.type === 'position_opened') {
+      line = '<span class="badge badge-win">OPEN</span> ';
+      line += '<b>' + (e.city || '').toUpperCase() + '</b> ';
+      line += '<span class="text-dim">' + e.bucket + '</span> ';
+      line += '$' + num(e.bet, 2) + ' NO@$' + num(e.no_price, 3) + ' ';
+      line += 'dist=' + num(e.distance);
+      if (e.wc_high != null) line += ' \u00b7 <span class="text-dim">wc=' + num(e.wc_high) + '</span>';
+      if (e.om_high != null) line += ' \u00b7 <span class="text-dim">om=' + num(e.om_high) + '</span>';
+      if (e.threshold != null) line += ' \u00b7 <span class="text-dim">thresh=' + num(e.threshold) + '</span>';
+      html += '<div style="display:grid;grid-template-columns:55px 1fr;gap:6px;padding:3px 0;border-bottom:1px solid var(--border);font-size:0.7rem;">';
+      html += '<span class="text-dim">' + ts + '</span>';
+      html += '<span>' + line + '</span>';
+      html += '</div>';
+    } else if (e.type === 'position_closed') {
+      var pnl = e.pnl || 0;
+      line = '<span class="badge badge-sell">CLOSE</span> ';
+      line += '<b>' + (e.city || '').toUpperCase() + '</b> ';
+      line += '<span class="' + pnlClass(pnl) + '">' + pnlStr(pnl) + '</span> ';
+      line += '<span class="text-dim">' + (e.reason || '').replace(/_/g, ' ') + '</span> ';
+      line += '\u00b7 $' + num(e.balance, 2) + ' bal';
+      html += '<div style="display:grid;grid-template-columns:55px 1fr;gap:6px;padding:3px 0;border-bottom:1px solid var(--border);font-size:0.7rem;">';
+      html += '<span class="text-dim">' + ts + '</span>';
+      html += '<span>' + line + '</span>';
+      html += '</div>';
+    } else if (e.type === 'position_monitor') {
+      var city = (e.city || '').toUpperCase();
+      var act = e.action || 'hold';
+      var actColor = act.indexOf('sell') >= 0 ? 'var(--red)' : act === 'hold' ? 'var(--green)' : 'var(--orange)';
+      var actLabel = act.replace(/_/g, ' ').toUpperCase();
+
+      html += '<div style="padding:3px 0 2px;border-bottom:1px solid var(--border);font-size:0.7rem;">';
+      html += '<div style="display:grid;grid-template-columns:55px 1fr;gap:6px;">';
+      html += '<span class="text-dim">' + ts + '</span>';
+      html += '<span>';
+      html += '<span style="color:' + actColor + ';">' + actLabel + '</span> ';
+      html += '<b>' + city + '</b> ';
+      html += '<span class="text-dim">' + (e.bucket_low != null ? e.bucket_low + '-' + e.bucket_high : '') + '</span>';
+      html += '</span></div>';
+
+      html += '<div style="display:grid;grid-template-columns:55px 1fr;gap:6px;margin-top:1px;">';
+      html += '<span class="text-dim"></span>';
+      html += '<span style="font-size:0.66rem;">';
+      if (e.metar_temp != null) html += 'M:<b>' + num(e.metar_temp) + '</b> ';
+      if (e.wc_high != null) html += 'WC:<b>' + num(e.wc_high) + '</b> ';
+      if (e.metar_distance != null) html += 'd:<b>' + num(e.metar_distance) + '</b> ';
+      html += 'NO $' + num(e.no_price, 3);
+      var pnl = e.pnl_pct || 0;
+      html += ' <span class="' + pnlClass(pnl) + '">' + (pnl >= 0 ? '+' : '') + pnl + '%</span>';
+      if (e.closing_in) html += ' <span style="color:var(--orange);">CLOSING</span>';
+      html += '</span></div>';
+
+      if (e.reason) {
+        html += '<div style="display:grid;grid-template-columns:55px 1fr;gap:6px;">';
+        html += '<span class="text-dim"></span>';
+        html += '<span class="text-dim" style="font-size:0.62rem;">' + e.reason.replace(/_/g, ' ') + '</span></div>';
+      }
+
+      html += '</div>';
+    }
+  }
+  body.innerHTML = html;
+}
+
+function renderTopbar(state) {
+  var b = state.bankroll || {};
+  var bot = state.bot || {};
+  var regions = state.regions || {};
+  var prp = b.portfolio_return_pct;
+
+  var bar = '$' + num(b.total || 10, 2) + ' total &middot; <span class="deployed">$' + num(b.deployed || 0, 2) + '</span> in ' + (state.positions_open || 0) + ' positions &middot; <span class="free">$' + num(b.free || b.current_balance || 10, 2) + '</span> free';
+  if (prp != null && prp !== 0) bar += ' &middot; <span class="' + pnlClass(prp) + '">' + (prp > 0 ? '+' : '') + prp + '% unrealized</span>';
+  $('bankrollBar').innerHTML = bar;
+
+  $('regionText').textContent = (regions.ist_hour || '--') + ' IST \u2014 ' + (regions.window || '--');
+  var alertCount = state.alert_count || 0;
+  $('alertCount').textContent = alertCount;
+  $('alertPill').querySelector('.dot').className = alertCount > 0 ? 'dot red' : 'dot orange';
+
+  if (bot.last_scan_ts > 0 && bot.scan_interval > 0) {
+    _scanTargetEpoch = bot.last_scan_ts + bot.scan_interval;
+  }
+  if (bot.last_monitor_ts > 0 && bot.metar_poll_seconds > 0) {
+    _monitorTargetEpoch = bot.last_monitor_ts + bot.metar_poll_seconds;
+  }
+}
+
+function safeRender(fn, arg1, arg2, arg3) {
+  try { fn(arg1, arg2, arg3); } catch(e) { console.error(fn.name + ' error:', e); }
+}
+
+async function doRefresh() {
+  var bar = $('refreshBar');
+  bar.style.width = '0%';
+  bar.style.transition = 'none';
+  requestAnimationFrame(function() { bar.style.transition = 'width 0.5s ease'; bar.style.width = '100%'; });
+
+  try {
+    var res = await fetch('/api/all');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    var data = await res.json();
+
+    window._lastPositions = data.positions || [];
+    window._lastEvents = data.events || [];
+    window._lastScanLog = data.scan_log || [];
+
+    safeRender(renderTopbar, data.state || {});
+    safeRender(renderPositions, data.positions || []);
+    safeRender(renderSignals, data.signals || []);
+    safeRender(renderEvents, data.events || [], $('evtFilterCity').value, $('evtFilterAction').value);
+    safeRender(renderAlerts, data.alerts || []);
+    safeRender(renderFullScan, data.full_scan || []);
+    safeRender(renderScanLog, data.scan_log || [], $('logFilterType').value);
+
+    $('statusDot').className = 'status-dot';
+    $('statusText').textContent = 'Connected';
+    _consecutiveFails = 0;
+  } catch (e) {
+    console.error('Refresh failed:', e);
+    _consecutiveFails++;
+    if (_consecutiveFails >= 2) {
+      $('statusDot').className = 'status-dot offline';
+      $('statusText').textContent = 'Disconnected';
+    }
+  }
+}
+
+document.querySelectorAll('#posTable th[data-sort]').forEach(function(th) {
+  th.addEventListener('click', function() {
+    var col = th.dataset.sort;
+    if (sortCol === col) { sortAsc = !sortAsc; } else { sortCol = col; sortAsc = true; }
+    safeRender(renderPositions, window._lastPositions || []);
+  });
+});
+
+$('evtFilterCity').addEventListener('change', function() {
+  safeRender(renderEvents, window._lastEvents || [], $('evtFilterCity').value, $('evtFilterAction').value);
+});
+$('evtFilterAction').addEventListener('change', function() {
+  safeRender(renderEvents, window._lastEvents || [], $('evtFilterCity').value, $('evtFilterAction').value);
+});
+$('logFilterType').addEventListener('change', function() {
+  safeRender(renderScanLog, window._lastScanLog || [], $('logFilterType').value);
+});
+
+doRefresh();
+setInterval(doRefresh, REFRESH_MS);
+
+setInterval(function() {
+  var now = Date.now() / 1000;
+  if (_scanTargetEpoch > 0) {
+    var s = Math.max(0, Math.round(_scanTargetEpoch - now));
+    $('scanCountdown').textContent = s > 0 ? fmtAge(s) : 'now';
+  }
+  if (_monitorTargetEpoch > 0) {
+    var m = Math.max(0, Math.round(_monitorTargetEpoch - now));
+    $('monitorCountdown').textContent = m > 0 ? fmtAge(m) : 'now';
+  }
+}, 1000);
+</script>
+</body>
+</html>

@@ -1,0 +1,434 @@
+{
+  "nyc": {
+    "name": "New York City",
+    "icao": "KLGA",
+    "lat": 40.7772,
+    "lon": -73.8726,
+    "unit": "F",
+    "timezone": "America/New_York",
+    "region": "americas"
+  },
+  "chicago": {
+    "name": "Chicago",
+    "icao": "KMDW",
+    "lat": 41.7868,
+    "lon": -87.7522,
+    "unit": "F",
+    "timezone": "America/Chicago",
+    "region": "americas"
+  },
+  "miami": {
+    "name": "Miami",
+    "icao": "KMIA",
+    "lat": 25.7959,
+    "lon": -80.2870,
+    "unit": "F",
+    "timezone": "America/New_York",
+    "region": "americas"
+  },
+  "dallas": {
+    "name": "Dallas",
+    "icao": "KDAL",
+    "lat": 32.8471,
+    "lon": -96.8518,
+    "unit": "F",
+    "timezone": "America/Chicago",
+    "region": "americas"
+  },
+  "seattle": {
+    "name": "Seattle",
+    "icao": "KSEA",
+    "lat": 47.4502,
+    "lon": -122.3088,
+    "unit": "F",
+    "timezone": "America/Los_Angeles",
+    "region": "americas"
+  },
+  "atlanta": {
+    "name": "Atlanta",
+    "icao": "KATL",
+    "lat": 33.6407,
+    "lon": -84.4277,
+    "unit": "F",
+    "timezone": "America/New_York",
+    "region": "americas"
+  },
+  "los-angeles": {
+    "name": "Los Angeles",
+    "icao": "KLAX",
+    "lat": 33.9425,
+    "lon": -118.4081,
+    "unit": "F",
+    "timezone": "America/Los_Angeles",
+    "region": "americas"
+  },
+  "san-francisco": {
+    "name": "San Francisco",
+    "icao": "KSFO",
+    "lat": 37.6213,
+    "lon": -122.3790,
+    "unit": "F",
+    "timezone": "America/Los_Angeles",
+    "region": "americas"
+  },
+  "houston": {
+    "name": "Houston",
+    "icao": "KIAH",
+    "lat": 29.9844,
+    "lon": -95.3414,
+    "unit": "F",
+    "timezone": "America/Chicago",
+    "region": "americas"
+  },
+  "toronto": {
+    "name": "Toronto",
+    "icao": "CYYZ",
+    "lat": 43.6772,
+    "lon": -79.6306,
+    "unit": "C",
+    "timezone": "America/Toronto",
+    "region": "americas"
+  },
+  "mexico-city": {
+    "name": "Mexico City",
+    "icao": "MMMX",
+    "lat": 19.4363,
+    "lon": -99.0721,
+    "unit": "C",
+    "timezone": "America/Mexico_City",
+    "region": "americas"
+  },
+  "austin": {
+    "name": "Austin",
+    "icao": "KAUS",
+    "lat": 30.1945,
+    "lon": -97.6699,
+    "unit": "F",
+    "timezone": "America/Chicago",
+    "region": "americas"
+  },
+  "denver": {
+    "name": "Denver",
+    "icao": "KDEN",
+    "lat": 39.8561,
+    "lon": -104.6737,
+    "unit": "F",
+    "timezone": "America/Denver",
+    "region": "americas"
+  },
+  "buenos-aires": {
+    "name": "Buenos Aires",
+    "icao": "SAEZ",
+    "lat": -34.8222,
+    "lon": -58.5358,
+    "unit": "C",
+    "timezone": "America/Argentina/Buenos_Aires",
+    "region": "americas"
+  },
+  "sao-paulo": {
+    "name": "Sao Paulo",
+    "icao": "SBGR",
+    "lat": -23.4356,
+    "lon": -46.4731,
+    "unit": "C",
+    "timezone": "America/Sao_Paulo",
+    "region": "americas"
+  },
+  "panama-city": {
+    "name": "Panama City",
+    "icao": "MPTO",
+    "lat": 9.0714,
+    "lon": -79.3835,
+    "unit": "C",
+    "timezone": "America/Panama",
+    "region": "americas"
+  },
+  "london": {
+    "name": "London",
+    "icao": "EGLC",
+    "lat": 51.5053,
+    "lon": 0.0553,
+    "unit": "C",
+    "timezone": "Europe/London",
+    "region": "europe"
+  },
+  "paris": {
+    "name": "Paris",
+    "icao": "LFPB",
+    "lat": 48.9694,
+    "lon": 2.4414,
+    "unit": "C",
+    "timezone": "Europe/Paris",
+    "region": "europe"
+  },
+  "madrid": {
+    "name": "Madrid",
+    "icao": "LEMD",
+    "lat": 40.4722,
+    "lon": -3.5611,
+    "unit": "C",
+    "timezone": "Europe/Madrid",
+    "region": "europe"
+  },
+  "warsaw": {
+    "name": "Warsaw",
+    "icao": "EPWA",
+    "lat": 52.1657,
+    "lon": 20.9671,
+    "unit": "C",
+    "timezone": "Europe/Warsaw",
+    "region": "europe"
+  },
+  "cape-town": {
+    "name": "Cape Town",
+    "icao": "FACT",
+    "lat": -33.9649,
+    "lon": 18.6017,
+    "unit": "C",
+    "timezone": "Africa/Johannesburg",
+    "region": "africa"
+  },
+  "helsinki": {
+    "name": "Helsinki",
+    "icao": "EFHK",
+    "lat": 60.3172,
+    "lon": 24.9633,
+    "unit": "C",
+    "timezone": "Europe/Helsinki",
+    "region": "europe"
+  },
+  "amsterdam": {
+    "name": "Amsterdam",
+    "icao": "EHAM",
+    "lat": 52.3086,
+    "lon": 4.7639,
+    "unit": "C",
+    "timezone": "Europe/Amsterdam",
+    "region": "europe"
+  },
+  "munich": {
+    "name": "Munich",
+    "icao": "EDDM",
+    "lat": 48.3537,
+    "lon": 11.7750,
+    "unit": "C",
+    "timezone": "Europe/Berlin",
+    "region": "europe"
+  },
+  "milan": {
+    "name": "Milan",
+    "icao": "LIMC",
+    "lat": 45.6306,
+    "lon": 8.7281,
+    "unit": "C",
+    "timezone": "Europe/Rome",
+    "region": "europe"
+  },
+  "moscow": {
+    "name": "Moscow",
+    "icao": "UUWW",
+    "lat": 55.5915,
+    "lon": 37.2615,
+    "unit": "C",
+    "timezone": "Europe/Moscow",
+    "region": "europe"
+  },
+  "istanbul": {
+    "name": "Istanbul",
+    "icao": "LTFM",
+    "lat": 41.2753,
+    "lon": 28.7519,
+    "unit": "C",
+    "timezone": "Europe/Istanbul",
+    "region": "europe"
+  },
+  "ankara": {
+    "name": "Ankara",
+    "icao": "LTAC",
+    "lat": 40.1281,
+    "lon": 32.9951,
+    "unit": "C",
+    "timezone": "Europe/Istanbul",
+    "region": "europe"
+  },
+  "tel-aviv": {
+    "name": "Tel Aviv",
+    "icao": "LLBG",
+    "lat": 32.0114,
+    "lon": 34.8867,
+    "unit": "C",
+    "timezone": "Asia/Jerusalem",
+    "region": "europe"
+  },
+  "jeddah": {
+    "name": "Jeddah",
+    "icao": "OEJN",
+    "lat": 21.6796,
+    "lon": 39.1565,
+    "unit": "C",
+    "timezone": "Asia/Riyadh",
+    "region": "europe"
+  },
+  "shanghai": {
+    "name": "Shanghai",
+    "icao": "ZSPD",
+    "lat": 31.1443,
+    "lon": 121.8083,
+    "unit": "C",
+    "timezone": "Asia/Shanghai",
+    "region": "asia"
+  },
+  "seoul": {
+    "name": "Seoul",
+    "icao": "RKSI",
+    "lat": 37.4691,
+    "lon": 126.4505,
+    "unit": "C",
+    "timezone": "Asia/Seoul",
+    "region": "asia"
+  },
+  "wellington": {
+    "name": "Wellington",
+    "icao": "NZWN",
+    "lat": -41.3272,
+    "lon": 174.8052,
+    "unit": "C",
+    "timezone": "Pacific/Auckland",
+    "region": "asia"
+  },
+  "tokyo": {
+    "name": "Tokyo",
+    "icao": "RJTT",
+    "lat": 35.5494,
+    "lon": 139.7798,
+    "unit": "C",
+    "timezone": "Asia/Tokyo",
+    "region": "asia"
+  },
+  "taipei": {
+    "name": "Taipei",
+    "icao": "RCSS",
+    "lat": 25.0777,
+    "lon": 121.2332,
+    "unit": "C",
+    "timezone": "Asia/Taipei",
+    "region": "asia"
+  },
+  "wuhan": {
+    "name": "Wuhan",
+    "icao": "ZHHH",
+    "lat": 30.7838,
+    "lon": 114.2081,
+    "unit": "C",
+    "timezone": "Asia/Shanghai",
+    "region": "asia"
+  },
+  "shenzhen": {
+    "name": "Shenzhen",
+    "icao": "ZGSZ",
+    "lat": 22.6393,
+    "lon": 113.8107,
+    "unit": "C",
+    "timezone": "Asia/Shanghai",
+    "region": "asia"
+  },
+  "beijing": {
+    "name": "Beijing",
+    "icao": "ZBAA",
+    "lat": 40.0799,
+    "lon": 116.6031,
+    "unit": "C",
+    "timezone": "Asia/Shanghai",
+    "region": "asia"
+  },
+  "chengdu": {
+    "name": "Chengdu",
+    "icao": "ZUUU",
+    "lat": 30.5785,
+    "lon": 103.9471,
+    "unit": "C",
+    "timezone": "Asia/Shanghai",
+    "region": "asia"
+  },
+  "guangzhou": {
+    "name": "Guangzhou",
+    "icao": "ZGGG",
+    "lat": 23.3924,
+    "lon": 113.2988,
+    "unit": "C",
+    "timezone": "Asia/Shanghai",
+    "region": "asia"
+  },
+  "qingdao": {
+    "name": "Qingdao",
+    "icao": "ZSQD",
+    "lat": 36.3661,
+    "lon": 120.0967,
+    "unit": "C",
+    "timezone": "Asia/Shanghai",
+    "region": "asia"
+  },
+  "chongqing": {
+    "name": "Chongqing",
+    "icao": "ZUCK",
+    "lat": 29.7192,
+    "lon": 106.6417,
+    "unit": "C",
+    "timezone": "Asia/Shanghai",
+    "region": "asia"
+  },
+  "singapore": {
+    "name": "Singapore",
+    "icao": "WSSS",
+    "lat": 1.3502,
+    "lon": 103.9940,
+    "unit": "C",
+    "timezone": "Asia/Singapore",
+    "region": "asia"
+  },
+  "kuala-lumpur": {
+    "name": "Kuala Lumpur",
+    "icao": "WMKK",
+    "lat": 2.7456,
+    "lon": 101.7099,
+    "unit": "C",
+    "timezone": "Asia/Kuala_Lumpur",
+    "region": "asia"
+  },
+  "manila": {
+    "name": "Manila",
+    "icao": "RPLL",
+    "lat": 14.5086,
+    "lon": 121.0194,
+    "unit": "C",
+    "timezone": "Asia/Manila",
+    "region": "asia"
+  },
+  "lucknow": {
+    "name": "Lucknow",
+    "icao": "VILK",
+    "lat": 26.7606,
+    "lon": 80.8893,
+    "unit": "C",
+    "timezone": "Asia/Kolkata",
+    "region": "asia"
+  },
+  "busan": {
+    "name": "Busan",
+    "icao": "RKPK",
+    "lat": 35.1796,
+    "lon": 128.9382,
+    "unit": "C",
+    "timezone": "Asia/Seoul",
+    "region": "asia"
+  },
+  "karachi": {
+    "name": "Karachi",
+    "icao": "OPKC",
+    "lat": 24.9065,
+    "lon": 67.1609,
+    "unit": "C",
+    "timezone": "Asia/Karachi",
+    "region": "asia"
+  }
+}
