@@ -24,13 +24,12 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://api.open-meteo.com/v1/forecast"
 ALT_URLS = [
     "https://api.open-meteo.com/v1/forecast",
-    "https://api.open-meteo.com/v1/forecast",
 ]
 
 _cache: dict[str, tuple[float, float]] = {}
 _CACHE_TTL = 600
 _last_request_ts: float = 0.0
-_MIN_GAP = 2.5
+_MIN_GAP = 5.0
 _cooldown_until: float = 0.0
 
 
@@ -63,6 +62,7 @@ def _throttle():
 
 def _fetch_urllib(url: str, params: dict, timeout: int = 20) -> Optional[dict]:
     """Method 1: urllib with custom SSL context."""
+    global _cooldown_until
     try:
         ctx = ssl.create_default_context()
         ctx.check_hostname = False
@@ -75,6 +75,13 @@ def _fetch_urllib(url: str, params: dict, timeout: int = 20) -> Optional[dict]:
         })
         with urlopen(req, timeout=timeout, context=ctx) as resp:
             return json.loads(resp.read().decode("utf-8"))
+    except HTTPError as e:
+        if e.code == 429:
+            _cooldown_until = time.time() + 60
+            logger.warning("Open-Meteo 429 rate limited, backing off 60s")
+        else:
+            logger.debug("urllib fetch failed: %s", e)
+        return None
     except Exception as e:
         logger.debug("urllib fetch failed: %s", e)
         return None
@@ -98,7 +105,8 @@ def _fetch_requests(url: str, params: dict, timeout: tuple = (5, 15)) -> Optiona
 
 
 def _fetch_requests_nossl(url: str, params: dict, timeout: tuple = (5, 15)) -> Optional[dict]:
-    """Method 3: requests with SSL verification disabled."""
+    """Method 2: requests with SSL verification disabled."""
+    global _cooldown_until
     try:
         resp = requests.get(
             url, params=params, timeout=timeout,
@@ -108,6 +116,10 @@ def _fetch_requests_nossl(url: str, params: dict, timeout: tuple = (5, 15)) -> O
                 "Accept": "application/json",
             },
         )
+        if resp.status_code == 429:
+            _cooldown_until = time.time() + 60
+            logger.warning("Open-Meteo 429 rate limited, backing off 60s")
+            return None
         resp.raise_for_status()
         return resp.json()
     except Exception as e:
@@ -122,11 +134,7 @@ def _try_fetch(params: dict) -> Optional[dict]:
         data = _fetch_urllib(url, params)
         if data and not data.get("error"):
             return data
-        # Method 2: requests
-        data = _fetch_requests(url, params)
-        if data and not data.get("error"):
-            return data
-        # Method 3: requests without SSL verify
+        # Method 2: requests without SSL verify
         data = _fetch_requests_nossl(url, params)
         if data and not data.get("error"):
             return data

@@ -25,7 +25,7 @@ from config import (
     MAX_OPEN_PAPER, MIN_BET, MAX_BET, DISTANCE_MIN, DISTANCE_MAX,
 )
 from simulator import Simulator
-from strategy import evaluate_entry, monitor_position, evaluate_bucket_signals, evaluate_all_buckets_detail
+from strategy import evaluate_all_buckets_detail, monitor_position
 from data_sources import polymarket
 
 logger = logging.getLogger("orchestrator")
@@ -164,15 +164,35 @@ def scan_entries(stations: dict, markets: list[dict]) -> int:
             } for b in failed_buckets[:8]],
         })
 
-        signal = evaluate_entry(city_slug, station, date_str)
-        if signal is not None:
-            all_signals.append(signal)
-            city_wc_high[city_slug] = signal["wc_high"]
+        if best_passed:
+            all_signals.append({
+                "city_slug": city_slug,
+                "date": date_str,
+                "market_id": best_passed.get("market_id", ""),
+                "question": best_passed.get("question", ""),
+                "bucket_range": tuple(best_passed["range"]),
+                "threshold": best_passed["threshold"],
+                "yes_price": best_passed["yes_price"],
+                "no_price": best_passed["no_price"],
+                "volume": best_passed["volume"],
+                "wc_high": wc_high,
+                "om_high": om_high,
+                "distance": best_passed["distance"],
+            })
 
-        misses = evaluate_bucket_signals(city_slug, station, date_str)
-        near_miss_signals.extend(misses)
-        if misses and misses[0].get("wc_high") is not None:
-            city_wc_high[city_slug] = misses[0]["wc_high"]
+        near_miss_signals.extend([{
+            "city_slug": city_slug,
+            "date": date_str,
+            "question": b.get("question", ""),
+            "bucket_range": tuple(b["range"]),
+            "threshold": b["threshold"],
+            "yes_price": b["yes_price"],
+            "no_price": b["no_price"],
+            "volume": b["volume"],
+            "wc_high": wc_high,
+            "distance": b["distance"],
+            "failed_filters": b["failed_filters"],
+        } for b in failed_buckets])
 
         for bucket in city_buckets:
             if bucket.get("closed") or not bucket.get("active"):
@@ -189,6 +209,8 @@ def scan_entries(stations: dict, markets: list[dict]) -> int:
                 "volume": bucket["volume"],
                 "wc_high": city_wc_high.get(city_slug),
             })
+
+        time.sleep(3)
 
     all_signals.sort(key=lambda s: s["distance"], reverse=True)
     _orchestrator_state["recent_signals"] = near_miss_signals
