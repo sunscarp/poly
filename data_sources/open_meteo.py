@@ -144,10 +144,14 @@ def _try_fetch(params: dict) -> Optional[dict]:
 def get_daily_high(lat: float, lon: float, target_date: str,
                    unit: str = "celsius", tz: str = "UTC",
                    model: str = "ecmwf_ifs025") -> Optional[float]:
+    global _cooldown_until
     key = _cache_key(lat, lon, target_date, unit, model)
     cached = _cache_get(key)
     if cached is not None:
         return cached
+
+    if _cooldown_until > time.time():
+        return None
 
     params = {
         "latitude": lat,
@@ -160,27 +164,22 @@ def get_daily_high(lat: float, lon: float, target_date: str,
         "bias_correction": "true",
     }
 
-    for attempt in range(1, MAX_RETRIES + 1):
-        _throttle()
-        try:
-            data = _try_fetch(params)
-            if data is None:
-                if attempt < MAX_RETRIES:
-                    time.sleep(RETRY_DELAY * attempt * 2)
-                continue
-            times = data.get("daily", {}).get("time", [])
-            temps = data.get("daily", {}).get("temperature_2m_max", [])
-            for i, t in enumerate(times):
-                if t == target_date and i < len(temps) and temps[i] is not None:
-                    temp = temps[i]
-                    _cache_set(key, temp)
-                    return temp
+    _throttle()
+    try:
+        data = _try_fetch(params)
+        if data is None:
             return None
-        except Exception as e:
-            logger.error("Open-Meteo error (attempt %d/%d): %s", attempt, MAX_RETRIES, e)
-            if attempt < MAX_RETRIES:
-                time.sleep(RETRY_DELAY * attempt * 2)
-    return None
+        times = data.get("daily", {}).get("time", [])
+        temps = data.get("daily", {}).get("temperature_2m_max", [])
+        for i, t in enumerate(times):
+            if t == target_date and i < len(temps) and temps[i] is not None:
+                temp = temps[i]
+                _cache_set(key, temp)
+                return temp
+        return None
+    except Exception as e:
+        logger.error("Open-Meteo error: %s", e)
+        return None
 
 
 def get_forecast_direction(lat: float, lon: float, target_date: str,
