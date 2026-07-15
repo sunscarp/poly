@@ -558,14 +558,14 @@ def scan_recommendations() -> list[dict]:
             no_price = bucket["no_price"]
             if no_price > 0.92:
                 continue
-            if distance < 0.5 or distance > 2.0:
+            if distance < 2.0:
                 continue
             if no_price < 0.01:
                 continue
             if om_high is not None:
                 om_threshold = _compute_threshold(om_high, t_low, t_high)
                 om_distance = abs(om_high - om_threshold)
-                if om_distance < 0.5:
+                if om_distance < 2.0:
                     continue
             link = build_event_link(slug, target_date)
             results.append({
