@@ -225,7 +225,7 @@ MONTH_NAME_MAP = {
 
 def parse_title(title: str) -> tuple[Optional[str], Optional[str]]:
     m = re.search(
-        r'highest temperature in (.+?) (?:be\s+\d+.*?\s+)?on (\w+) (\d+)(?:,?\s*(\d{4}))?',
+        r'highest temperature in (.+?)\s+be\s+.*?on\s+(\w+)\s+(\d+)(?:,?\s*(\d{4}))?',
         title, re.IGNORECASE
     )
     if not m:
