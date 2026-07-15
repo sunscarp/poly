@@ -586,8 +586,14 @@ def scan_recommendations() -> list[dict]:
                 "link": link,
                 "region": station.get("region", ""),
             })
-    results.sort(key=lambda r: r["distance"])
-    return results
+    results.sort(key=lambda r: -r["distance"])
+    seen_cities: set[str] = set()
+    deduped: list[dict] = []
+    for r in results:
+        if r["city_slug"] not in seen_cities:
+            seen_cities.add(r["city_slug"])
+            deduped.append(r)
+    return deduped
 
 
 # ── Recommendation State & Alerts ───────────────────────────────────────────
@@ -1081,8 +1087,14 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); }
   border-top: 1px solid rgba(30,45,69,0.5); }
 .rec-link a { color: var(--green); font-size: 0.72rem; text-decoration: none; font-weight: 600; }
 .rec-link a:hover { text-decoration: underline; }
+.rec-scroll { max-height: 55vh; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; padding-right: 4px; }
+.rec-scroll::-webkit-scrollbar { width: 6px; }
+.rec-scroll::-webkit-scrollbar-track { background: var(--surface2); border-radius: 3px; }
+.rec-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+.rec-scroll::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
 @media (max-width: 600px) {
   .cards, .recs { grid-template-columns: 1fr; }
+  .rec-scroll { grid-template-columns: 1fr; max-height: 60vh; }
   .header { flex-direction: column; align-items: flex-start; }
   .summary { gap: 6px; }
   .summary-card { min-width: 0; }
@@ -1201,16 +1213,16 @@ function renderRecs(recs) {
     return;
   }
   let html = '<div class="section-title">Buy Recommendations <span class="badge">' + list.length + '</span> <span style="font-weight:400;font-size:0.68rem;color:var(--text-dim)">' + region + ' | ' + target + '</span></div>';
-  html += '<div class="cards recs">';
+  html += '<div class="rec-scroll">';
   for (const r of list) {
-    const unitChar = (r.city_slug && r.city_slug.includes('paris')) ? 'C' : (r.region === 'americas' ? 'F' : 'C');
+    const unitChar = r.region === 'americas' ? 'F' : 'C';
     let bLabel;
     if (r.bucket_low === -999) bLabel = '\u2264' + Math.round(r.bucket_high) + '\u00b0' + unitChar;
     else if (r.bucket_high === 999) bLabel = '\u2265' + Math.round(r.bucket_low) + '\u00b0' + unitChar;
     else if (r.bucket_low === r.bucket_high) bLabel = Math.round(r.bucket_low) + '\u00b0' + unitChar;
     else bLabel = Math.round(r.bucket_low) + '-' + Math.round(r.bucket_high) + '\u00b0' + unitChar;
-    const dClass = r.distance <= 1.0 ? 'rec-dist-close' : 'rec-dist-ok';
-    const omHi = r.om_high !== null ? r.om_high.toFixed(1) + '\u00b0C' : nd;
+    const dClass = r.distance >= 4.0 ? 'rec-dist-close' : 'rec-dist-ok';
+    const omHi = r.om_high !== null ? r.om_high.toFixed(1) + '\u00b0' + unitChar : nd;
     html += '<div class="rec-card">' +
       '<div class="rec-top"><div><span class="rec-city">' + r.city + '<span class="rec-region">' + r.region + '</span></span>' +
       '<div class="rec-date">' + r.date + '</div></div>' +
