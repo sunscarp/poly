@@ -1257,6 +1257,18 @@ class TrackerHandler(SimpleHTTPRequestHandler):
                 })
             elif path == "/api/health":
                 self._json_response({"ok": True, "holdings": len(_holdings)})
+            elif path == "/api/summary":
+                total_no = sum(h.get("no_cost", 0) for h in _holdings)
+                self._json_response({
+                    "ok": True,
+                    "wallet": WALLET,
+                    "holdings": len(_holdings),
+                    "total_no_cost": round(total_no, 2),
+                    "last_refresh": _last_refresh,
+                    "target_date": get_target_date(),
+                    "stations": len(_stations),
+                    "telegram": TG_ENABLED,
+                })
             elif path == "/api/recommendations":
                 self._json_response({
                     "recommendations": _recommendations,
