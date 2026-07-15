@@ -399,6 +399,294 @@ def get_live_no_price(market_id: str) -> Optional[float]:
         return None
 
 
+# ── Gamma API Bucket Discovery ───────────────────────────────────────────────
+
+_event_cache: dict[str, tuple[dict, float]] = {}
+_EVENT_CACHE_TTL = 300
+
+REC_STATE_FILE = Path(__file__).parent / "rec_state.json"
+_rec_state: dict[str, dict] = {}
+_recommendations: list[dict] = []
+_last_rec_refresh: float = 0
+_rec_lock = threading.Lock()
+_seen_recs: set[str] = set()
+REC_REFRESH_INTERVAL = 300  # 5 minutes
+_rec_first_scan_done = False
+
+
+def _slug_for_date(city_slug: str, date_str: str) -> str:
+    parts = date_str.split("-")
+    year = parts[0]
+    month = MONTHS[int(parts[1]) - 1]
+    day = int(parts[2])
+    return f"highest-temperature-in-{city_slug}-on-{month}-{day}-{year}"
+
+
+def _parse_temp_range(question: str) -> tuple[float, float]:
+    m = re.search(r'between\s+(\d+(?:\.\d+)?)\s*[-\u2013]\s*(\d+(?:\.\d+)?)\s*\u00b0', question)
+    if m:
+        return (float(m.group(1)), float(m.group(2)))
+    m = re.search(r'(\d+(?:\.\d+)?)\s*\u00b0[FC]\s+or\s+below', question, re.IGNORECASE)
+    if m:
+        return (-999.0, float(m.group(1)))
+    m = re.search(r'(\d+(?:\.\d+)?)\s*\u00b0[FC]\s+or\s+higher', question, re.IGNORECASE)
+    if m:
+        return (float(m.group(1)), 999.0)
+    m = re.search(r'be\s+(\d+(?:\.\d+)?)\s*\u00b0[FC]\s+on', question, re.IGNORECASE)
+    if m:
+        val = float(m.group(1))
+        return (val, val)
+    return (0.0, 0.0)
+
+
+def get_event(city_slug: str, date_str: str) -> Optional[dict]:
+    slug = _slug_for_date(city_slug, date_str)
+    cached = _event_cache.get(slug)
+    if cached and cached[1] > time.time():
+        return cached[0]
+    url = f"{GAMMA_API}/events"
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            resp = requests.get(url, params={"slug": slug}, timeout=REQUEST_TIMEOUT)
+            resp.raise_for_status()
+            data = resp.json()
+            if data and isinstance(data, list) and len(data) > 0:
+                event = data[0]
+                _event_cache[slug] = (event, time.time() + _EVENT_CACHE_TTL)
+                return event
+            return None
+        except requests.RequestException as e:
+            logger.debug("Polymarket event error (attempt %d/%d): %s", attempt, MAX_RETRIES, e)
+            if attempt < MAX_RETRIES:
+                time.sleep(RETRY_DELAY * attempt)
+    return None
+
+
+def get_city_buckets(city_slug: str, date_str: str) -> list[dict]:
+    event = get_event(city_slug, date_str)
+    if not event:
+        return []
+    buckets = []
+    for market in event.get("markets", []):
+        question = market.get("question", "")
+        t_low, t_high = _parse_temp_range(question)
+        if t_low == 0.0 and t_high == 0.0:
+            continue
+        prices_raw = market.get("outcomePrices", "[0.5,0.5]")
+        prices = json.loads(prices_raw) if isinstance(prices_raw, str) else prices_raw
+        yes_price = float(prices[0]) if len(prices) > 0 else 0.5
+        no_price = float(prices[1]) if len(prices) > 1 else 0.5
+        volume = float(market.get("volume", 0))
+        clob_token_ids = market.get("clobTokenIds", "")
+        if isinstance(clob_token_ids, str):
+            try:
+                clob_token_ids = json.loads(clob_token_ids) if clob_token_ids else []
+            except json.JSONDecodeError:
+                clob_token_ids = []
+        no_token_id = clob_token_ids[1] if len(clob_token_ids) > 1 else ""
+        buckets.append({
+            "market_id": market.get("id", ""),
+            "token_id": no_token_id,
+            "question": question,
+            "range": (t_low, t_high),
+            "yes_price": yes_price,
+            "no_price": no_price,
+            "volume": volume,
+            "active": market.get("active", True),
+            "closed": market.get("closed", False),
+        })
+    buckets.sort(key=lambda b: b["range"][0])
+    return buckets
+
+
+def _compute_threshold(wc_high: float, t_low: float, t_high: float) -> float:
+    if t_low == -999:
+        return t_high
+    if t_high == 999:
+        return t_low
+    return t_high if wc_high > (t_low + t_high) / 2 else t_low
+
+
+# ── Region Scheduler ────────────────────────────────────────────────────────
+
+def get_allowed_regions() -> set:
+    IST = timezone(timedelta(hours=5, minutes=30))
+    hour = datetime.now(IST).hour
+    if hour < 9:
+        return {"asia"}
+    elif hour < 16:
+        return {"asia", "europe", "africa"}
+    else:
+        return {"asia", "europe", "africa", "americas"}
+
+
+def get_target_date() -> str:
+    IST = timezone(timedelta(hours=5, minutes=30))
+    return datetime.now(IST).strftime("%Y-%m-%d")
+
+
+# ── Recommendation Scanner ──────────────────────────────────────────────────
+
+def scan_recommendations() -> list[dict]:
+    target_date = get_target_date()
+    allowed = get_allowed_regions()
+    results = []
+    for slug, station in _stations.items():
+        if station.get("region") not in allowed:
+            continue
+        lat, lon = station["lat"], station["lon"]
+        unit = station.get("unit", "F")
+        if lat is None or lon is None:
+            continue
+        twc_unit = "e" if unit == "F" else "m"
+        wc_high = get_tw_daily_high(lat, lon, target_date, unit=twc_unit)
+        if wc_high is None:
+            continue
+        om_high_c = get_om_daily_high(lat, lon, target_date, unit="celsius", tz=station.get("timezone", "UTC"))
+        om_high = round(om_high_c * 9 / 5 + 32, 1) if om_high_c is not None and unit == "F" else om_high_c
+        buckets = get_city_buckets(slug, target_date)
+        for bucket in buckets:
+            if bucket["closed"] or not bucket["active"]:
+                continue
+            if bucket["volume"] < 100:
+                continue
+            t_low, t_high = bucket["range"]
+            if t_low == 0.0 and t_high == 0.0:
+                continue
+            threshold = _compute_threshold(wc_high, t_low, t_high)
+            distance = abs(wc_high - threshold)
+            no_price = bucket["no_price"]
+            if no_price > 0.92:
+                continue
+            if distance < 0.5 or distance > 2.0:
+                continue
+            if no_price < 0.01:
+                continue
+            if om_high is not None:
+                om_threshold = _compute_threshold(om_high, t_low, t_high)
+                om_distance = abs(om_high - om_threshold)
+                if om_distance < 0.5:
+                    continue
+            link = build_event_link(slug, target_date)
+            results.append({
+                "city_slug": slug,
+                "city": station.get("name", slug),
+                "date": target_date,
+                "bucket_low": t_low,
+                "bucket_high": t_high,
+                "threshold": threshold,
+                "distance": round(distance, 1),
+                "no_price": no_price,
+                "yes_price": bucket["yes_price"],
+                "volume": bucket["volume"],
+                "wc_high": wc_high,
+                "om_high": om_high,
+                "market_id": bucket["market_id"],
+                "question": bucket["question"],
+                "link": link,
+                "region": station.get("region", ""),
+            })
+    results.sort(key=lambda r: r["distance"])
+    return results
+
+
+# ── Recommendation State & Alerts ───────────────────────────────────────────
+
+def _load_rec_state():
+    global _rec_state, _seen_recs
+    try:
+        raw = REC_STATE_FILE.read_text(encoding="utf-8")
+        _rec_state = json.loads(raw)
+    except (FileNotFoundError, json.JSONDecodeError):
+        _rec_state = {}
+    _seen_recs = set(_rec_state.keys())
+
+
+def _save_rec_state():
+    try:
+        REC_STATE_FILE.write_text(
+            json.dumps(_rec_state, indent=2, ensure_ascii=False),
+            encoding="utf-8"
+        )
+    except Exception as e:
+        logger.debug("Failed to save rec state: %s", e)
+
+
+def _rec_key(r: dict) -> str:
+    return f"{r['city_slug']}_{r['date']}_{r['bucket_low']}_{r['bucket_high']}"
+
+
+def _send_rec_alerts(recs: list[dict]):
+    global _rec_first_scan_done
+    if not _rec_first_scan_done:
+        _rec_first_scan_done = True
+        for r in recs:
+            key = _rec_key(r)
+            _rec_state[key] = {
+                "no_price": r["no_price"],
+                "alerted_at": datetime.now(timezone.utc).isoformat(),
+                "distance": r["distance"],
+            }
+            _seen_recs.add(key)
+        _save_rec_state()
+        logger.info("First rec scan: seeded %d recs (no alerts sent)", len(recs))
+        return
+    for r in recs:
+        key = _rec_key(r)
+        if key in _seen_recs:
+            prev = _rec_state.get(key, {})
+            prev_price = prev.get("no_price", 1.0)
+            if r["no_price"] >= prev_price - 0.02:
+                continue
+        unit_char = "F" if r.get("wc_high") and r["city_slug"] in _stations and _stations[r["city_slug"]].get("unit") == "F" else "C"
+        bucket_label = f"{int(r['threshold'])}°{unit_char}"
+        if r["bucket_low"] == -999:
+            bucket_label = f"≤{int(r['bucket_high'])}°{unit_char}"
+        elif r["bucket_high"] == 999:
+            bucket_label = f"≥{int(r['bucket_low'])}°{unit_char}"
+        elif r["bucket_low"] == r["bucket_high"]:
+            bucket_label = f"{int(r['bucket_low'])}°{unit_char}"
+        else:
+            bucket_label = f"{int(r['bucket_low'])}-{int(r['bucket_high'])}°{unit_char}"
+        msg = (
+            f"\U0001f7e2 <b>NEW BUY RECOMMENDATION</b>\n\n"
+            f"<b>{r['city']}</b> | {bucket_label} | {r['date']}\n"
+            f"NO Price: ${r['no_price']:.3f} | Distance: {r['distance']:.1f}°\n"
+            f"WC High: {r['wc_high']:.1f}°{unit_char}"
+        )
+        if r["om_high"] is not None:
+            msg += f" | OM High: {r['om_high']:.1f}°C"
+        msg += f"\nVolume: {r['volume']:.0f}\n\n{r['link']}"
+        send_telegram(msg)
+        _rec_state[key] = {
+            "no_price": r["no_price"],
+            "alerted_at": datetime.now(timezone.utc).isoformat(),
+            "distance": r["distance"],
+        }
+        _seen_recs.add(key)
+    _save_rec_state()
+
+
+def _rec_scan_loop():
+    while True:
+        time.sleep(REC_REFRESH_INTERVAL)
+        try:
+            refresh_recommendations()
+        except Exception as e:
+            logger.error("Recommendation scan error: %s", e)
+
+
+def refresh_recommendations():
+    global _recommendations, _last_rec_refresh
+    with _rec_lock:
+        logger.info("Scanning recommendations...")
+        recs = scan_recommendations()
+        _recommendations = recs
+        _last_rec_refresh = time.time()
+        _send_rec_alerts(recs)
+        logger.info("Found %d recommendations", len(recs))
+
+
 # ── Telegram ─────────────────────────────────────────────────────────────────
 
 def send_telegram(message: str):
@@ -758,8 +1046,43 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); }
 @keyframes spin { to { transform: rotate(360deg); } }
 .empty { text-align: center; padding: 40px; color: var(--text-dim); }
 .empty h3 { margin-bottom: 6px; color: var(--text); }
+.section-title {
+  font-size: 0.82rem; font-weight: 700; color: var(--green); margin: 18px 0 10px 0;
+  padding-bottom: 6px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 8px;
+}
+.section-title .badge {
+  background: var(--green); color: var(--bg); font-size: 0.62rem; font-weight: 700;
+  padding: 1px 7px; border-radius: 10px;
+}
+.rec-card {
+  background: var(--surface); border: 1px solid rgba(34,197,94,0.25); border-radius: 10px;
+  padding: 14px; transition: border-color 0.15s;
+}
+.rec-card:hover { border-color: var(--green); }
+.rec-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+.rec-city { font-weight: 700; font-size: 0.95rem; }
+.rec-region { font-size: 0.58rem; color: var(--text-dim); background: var(--surface2);
+  padding: 1px 5px; border-radius: 3px; font-family: var(--mono); margin-left: 5px; text-transform: uppercase; }
+.rec-bucket { font-family: var(--mono); font-weight: 700; color: var(--green); font-size: 1rem; }
+.rec-date { font-size: 0.7rem; color: var(--text-dim); font-family: var(--mono); margin-top: 2px; }
+.rec-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 5px 0; border-top: 1px solid rgba(30,45,69,0.5);
+  font-size: 0.76rem; gap: 8px;
+}
+.rec-row-label { color: var(--text-dim); font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.4px; min-width: 55px; }
+.rec-row-val { font-family: var(--mono); font-weight: 600; text-align: right; }
+.rec-price { color: var(--green); font-weight: 700; }
+.rec-dist { font-weight: 700; }
+.rec-dist-close { color: var(--green); }
+.rec-dist-ok { color: var(--yellow); }
+.rec-link { display: block; text-align: center; margin-top: 8px; padding-top: 6px;
+  border-top: 1px solid rgba(30,45,69,0.5); }
+.rec-link a { color: var(--green); font-size: 0.72rem; text-decoration: none; font-weight: 600; }
+.rec-link a:hover { text-decoration: underline; }
 @media (max-width: 600px) {
-  .cards { grid-template-columns: 1fr; }
+  .cards, .recs { grid-template-columns: 1fr; }
   .header { flex-direction: column; align-items: flex-start; }
   .summary { gap: 6px; }
   .summary-card { min-width: 0; }
@@ -778,6 +1101,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); }
     </div>
   </div>
   <div class="summary" id="summary"></div>
+  <div id="recs"></div>
   <div id="content"><div class="loading"><div class="spinner"></div><div>Loading...</div></div></div>
 </div>
 <script>
@@ -794,10 +1118,12 @@ function updateCountdown() {
 
 async function loadData() {
   try {
-    const r = await fetch('/api/data');
-    const d = await r.json();
+    const [dataR, recR] = await Promise.all([fetch('/api/data'), fetch('/api/recommendations')]);
+    const d = await dataR.json();
+    const recs = await recR.json();
     lastRefreshTs = d.last_refresh || (Date.now()/1000);
     render(d);
+    renderRecs(recs);
   } catch(e) {
     document.getElementById('content').innerHTML = '<div class="empty"><h3>Error</h3><p>'+e.message+'</p></div>';
   }
@@ -865,6 +1191,41 @@ function render(data) {
   document.getElementById('content').innerHTML = html;
 }
 
+function renderRecs(recs) {
+  const list = recs.recommendations || [];
+  const region = recs.region || '?';
+  const target = recs.target_date || '?';
+  const nd = '<span class="no-data">\u2014</span>';
+  if (!list.length) {
+    document.getElementById('recs').innerHTML = '<div class="section-title">Buy Recommendations (' + region + ' | ' + target + ')</div><div class="empty" style="padding:15px"><h3>No qualifying recommendations right now</h3></div>';
+    return;
+  }
+  let html = '<div class="section-title">Buy Recommendations <span class="badge">' + list.length + '</span> <span style="font-weight:400;font-size:0.68rem;color:var(--text-dim)">' + region + ' | ' + target + '</span></div>';
+  html += '<div class="cards recs">';
+  for (const r of list) {
+    const unitChar = (r.city_slug && r.city_slug.includes('paris')) ? 'C' : (r.region === 'americas' ? 'F' : 'C');
+    let bLabel;
+    if (r.bucket_low === -999) bLabel = '\u2264' + Math.round(r.bucket_high) + '\u00b0' + unitChar;
+    else if (r.bucket_high === 999) bLabel = '\u2265' + Math.round(r.bucket_low) + '\u00b0' + unitChar;
+    else if (r.bucket_low === r.bucket_high) bLabel = Math.round(r.bucket_low) + '\u00b0' + unitChar;
+    else bLabel = Math.round(r.bucket_low) + '-' + Math.round(r.bucket_high) + '\u00b0' + unitChar;
+    const dClass = r.distance <= 1.0 ? 'rec-dist-close' : 'rec-dist-ok';
+    const omHi = r.om_high !== null ? r.om_high.toFixed(1) + '\u00b0C' : nd;
+    html += '<div class="rec-card">' +
+      '<div class="rec-top"><div><span class="rec-city">' + r.city + '<span class="rec-region">' + r.region + '</span></span>' +
+      '<div class="rec-date">' + r.date + '</div></div>' +
+      '<div class="rec-bucket">' + bLabel + '</div></div>' +
+      '<div class="rec-row"><span class="rec-row-label">NO Price</span><span class="rec-row-val rec-price">$' + r.no_price.toFixed(3) + '</span></div>' +
+      '<div class="rec-row"><span class="rec-row-label">Distance</span><span class="rec-row-val rec-dist ' + dClass + '">' + r.distance.toFixed(1) + '\u00b0</span></div>' +
+      '<div class="rec-row"><span class="rec-row-label">WC High</span><span class="rec-row-val t-wc">' + r.wc_high.toFixed(1) + '\u00b0</span></div>' +
+      '<div class="rec-row"><span class="rec-row-label">OM High</span><span class="rec-row-val t-om">' + omHi + '</span></div>' +
+      '<div class="rec-row"><span class="rec-row-label">Volume</span><span class="rec-row-val">' + Math.round(r.volume) + '</span></div>' +
+      '<div class="rec-link"><a href="' + r.link + '" target="_blank">View on Polymarket \u2197</a></div></div>';
+  }
+  html += '</div>';
+  document.getElementById('recs').innerHTML = html;
+}
+
 async function refresh() {
   if (refreshing) return;
   refreshing = true;
@@ -900,6 +1261,13 @@ class TrackerHandler(SimpleHTTPRequestHandler):
                 })
             elif path == "/api/health":
                 self._json_response({"ok": True, "holdings": len(_holdings)})
+            elif path == "/api/recommendations":
+                self._json_response({
+                    "recommendations": _recommendations,
+                    "last_refresh": _last_rec_refresh,
+                    "target_date": get_target_date(),
+                    "region": ", ".join(sorted(get_allowed_regions())),
+                })
             else:
                 self.send_error(404)
         except Exception as e:
@@ -950,10 +1318,13 @@ def _auto_refresh_loop():
 def main():
     _load_stations()
     _load_alert_state()
+    _load_rec_state()
 
-    logger.info("Fetching initial holdings...")
+    logger.info("Fetching initial holdings + recommendations...")
     threading.Thread(target=refresh_holdings, daemon=True).start()
+    threading.Thread(target=refresh_recommendations, daemon=True).start()
     threading.Thread(target=_auto_refresh_loop, daemon=True, name="auto-refresh").start()
+    threading.Thread(target=_rec_scan_loop, daemon=True, name="rec-scan").start()
 
     server = HTTPServer(("0.0.0.0", PORT), TrackerHandler)
     tg_status = f"Telegram: {'ON' if TG_ENABLED else 'OFF (set TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID)'}"
@@ -962,7 +1333,8 @@ def main():
     print(f"  Dashboard:   http://localhost:{PORT}")
     print(f"  Wallet:      {WALLET[:6]}...{WALLET[-4:]}")
     print(f"  Stations:    {len(_stations)} loaded")
-    print(f"  Refresh:     every {REFRESH_INTERVAL}s")
+    print(f"  Refresh:     every {REFRESH_INTERVAL}s (holdings) / {REC_REFRESH_INTERVAL}s (recs)")
+    print(f"  Region:      {', '.join(sorted(get_allowed_regions()))} | Target: {get_target_date()}")
     print(f"  {tg_status}")
     print(f"{'='*60}\n")
 
