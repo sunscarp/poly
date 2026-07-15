@@ -20,8 +20,8 @@
   "miami": {
     "name": "Miami",
     "icao": "KMIA",
-    "lat": 25.7959,
-    "lon": -80.2870,
+    "lat": 25.796011,
+    "lon": -80.289751,
     "unit": "F",
     "timezone": "America/New_York",
     "region": "americas"
@@ -29,8 +29,8 @@
   "dallas": {
     "name": "Dallas",
     "icao": "KDAL",
-    "lat": 32.8471,
-    "lon": -96.8518,
+    "lat": 32.844776,
+    "lon": -96.847653,
     "unit": "F",
     "timezone": "America/Chicago",
     "region": "americas"
@@ -38,8 +38,8 @@
   "seattle": {
     "name": "Seattle",
     "icao": "KSEA",
-    "lat": 47.4502,
-    "lon": -122.3088,
+    "lat": 47.447943,
+    "lon": -122.310276,
     "unit": "F",
     "timezone": "America/Los_Angeles",
     "region": "americas"
@@ -47,8 +47,8 @@
   "atlanta": {
     "name": "Atlanta",
     "icao": "KATL",
-    "lat": 33.6407,
-    "lon": -84.4277,
+    "lat": 33.6367,
+    "lon": -84.428101,
     "unit": "F",
     "timezone": "America/New_York",
     "region": "americas"
@@ -65,8 +65,8 @@
   "san-francisco": {
     "name": "San Francisco",
     "icao": "KSFO",
-    "lat": 37.6213,
-    "lon": -122.3790,
+    "lat": 37.619806,
+    "lon": -122.374821,
     "unit": "F",
     "timezone": "America/Los_Angeles",
     "region": "americas"
@@ -83,8 +83,8 @@
   "toronto": {
     "name": "Toronto",
     "icao": "CYYZ",
-    "lat": 43.6772,
-    "lon": -79.6306,
+    "lat": 43.675935,
+    "lon": -79.629421,
     "unit": "C",
     "timezone": "America/Toronto",
     "region": "americas"
@@ -92,8 +92,8 @@
   "mexico-city": {
     "name": "Mexico City",
     "icao": "MMMX",
-    "lat": 19.4363,
-    "lon": -99.0721,
+    "lat": 19.435822,
+    "lon": -99.07033,
     "unit": "C",
     "timezone": "America/Mexico_City",
     "region": "americas"
@@ -101,8 +101,8 @@
   "austin": {
     "name": "Austin",
     "icao": "KAUS",
-    "lat": 30.1945,
-    "lon": -97.6699,
+    "lat": 30.197535,
+    "lon": -97.662015,
     "unit": "F",
     "timezone": "America/Chicago",
     "region": "americas"
@@ -110,8 +110,8 @@
   "denver": {
     "name": "Denver",
     "icao": "KDEN",
-    "lat": 39.8561,
-    "lon": -104.6737,
+    "lat": 39.860027,
+    "lon": -104.673792,
     "unit": "F",
     "timezone": "America/Denver",
     "region": "americas"
@@ -128,8 +128,8 @@
   "sao-paulo": {
     "name": "Sao Paulo",
     "icao": "SBGR",
-    "lat": -23.4356,
-    "lon": -46.4731,
+    "lat": -23.431274,
+    "lon": -46.469954,
     "unit": "C",
     "timezone": "America/Sao_Paulo",
     "region": "americas"
@@ -155,8 +155,8 @@
   "paris": {
     "name": "Paris",
     "icao": "LFPB",
-    "lat": 48.9694,
-    "lon": 2.4414,
+    "lat": 48.962276,
+    "lon": 2.436539,
     "unit": "C",
     "timezone": "Europe/Paris",
     "region": "europe"
@@ -164,8 +164,8 @@
   "madrid": {
     "name": "Madrid",
     "icao": "LEMD",
-    "lat": 40.4722,
-    "lon": -3.5611,
+    "lat": 40.493407,
+    "lon": -3.572249,
     "unit": "C",
     "timezone": "Europe/Madrid",
     "region": "europe"
@@ -182,8 +182,8 @@
   "cape-town": {
     "name": "Cape Town",
     "icao": "FACT",
-    "lat": -33.9649,
-    "lon": 18.6017,
+    "lat": -33.97403,
+    "lon": 18.604333,
     "unit": "C",
     "timezone": "Africa/Johannesburg",
     "region": "africa"
@@ -191,8 +191,8 @@
   "helsinki": {
     "name": "Helsinki",
     "icao": "EFHK",
-    "lat": 60.3172,
-    "lon": 24.9633,
+    "lat": 60.318363,
+    "lon": 24.963341,
     "unit": "C",
     "timezone": "Europe/Helsinki",
     "region": "europe"
@@ -209,8 +209,8 @@
   "munich": {
     "name": "Munich",
     "icao": "EDDM",
-    "lat": 48.3537,
-    "lon": 11.7750,
+    "lat": 48.353802,
+    "lon": 11.7861,
     "unit": "C",
     "timezone": "Europe/Berlin",
     "region": "europe"
@@ -236,8 +236,8 @@
   "istanbul": {
     "name": "Istanbul",
     "icao": "LTFM",
-    "lat": 41.2753,
-    "lon": 28.7519,
+    "lat": 41.274874,
+    "lon": 28.732136,
     "unit": "C",
     "timezone": "Europe/Istanbul",
     "region": "europe"
@@ -272,8 +272,8 @@
   "shanghai": {
     "name": "Shanghai",
     "icao": "ZSPD",
-    "lat": 31.1443,
-    "lon": 121.8083,
+    "lat": 31.1434,
+    "lon": 121.805,
     "unit": "C",
     "timezone": "Asia/Shanghai",
     "region": "asia"
@@ -290,8 +290,8 @@
   "wellington": {
     "name": "Wellington",
     "icao": "NZWN",
-    "lat": -41.3272,
-    "lon": 174.8052,
+    "lat": -41.326839,
+    "lon": 174.806862,
     "unit": "C",
     "timezone": "Pacific/Auckland",
     "region": "asia"
@@ -299,8 +299,8 @@
   "tokyo": {
     "name": "Tokyo",
     "icao": "RJTT",
-    "lat": 35.5494,
-    "lon": 139.7798,
+    "lat": 35.549678,
+    "lon": 139.786958,
     "unit": "C",
     "timezone": "Asia/Tokyo",
     "region": "asia"
@@ -308,8 +308,8 @@
   "taipei": {
     "name": "Taipei",
     "icao": "RCSS",
-    "lat": 25.0777,
-    "lon": 121.2332,
+    "lat": 25.067244,
+    "lon": 121.552822,
     "unit": "C",
     "timezone": "Asia/Taipei",
     "region": "asia"
@@ -317,8 +317,8 @@
   "wuhan": {
     "name": "Wuhan",
     "icao": "ZHHH",
-    "lat": 30.7838,
-    "lon": 114.2081,
+    "lat": 30.774798,
+    "lon": 114.213723,
     "unit": "C",
     "timezone": "Asia/Shanghai",
     "region": "asia"
@@ -326,8 +326,8 @@
   "shenzhen": {
     "name": "Shenzhen",
     "icao": "ZGSZ",
-    "lat": 22.6393,
-    "lon": 113.8107,
+    "lat": 22.639474,
+    "lon": 113.803262,
     "unit": "C",
     "timezone": "Asia/Shanghai",
     "region": "asia"
@@ -335,8 +335,8 @@
   "beijing": {
     "name": "Beijing",
     "icao": "ZBAA",
-    "lat": 40.0799,
-    "lon": 116.6031,
+    "lat": 40.077349,
+    "lon": 116.596702,
     "unit": "C",
     "timezone": "Asia/Shanghai",
     "region": "asia"
@@ -344,8 +344,8 @@
   "chengdu": {
     "name": "Chengdu",
     "icao": "ZUUU",
-    "lat": 30.5785,
-    "lon": 103.9471,
+    "lat": 30.558257,
+    "lon": 103.945966,
     "unit": "C",
     "timezone": "Asia/Shanghai",
     "region": "asia"
@@ -362,8 +362,8 @@
   "qingdao": {
     "name": "Qingdao",
     "icao": "ZSQD",
-    "lat": 36.3661,
-    "lon": 120.0967,
+    "lat": 36.361953,
+    "lon": 120.088171,
     "unit": "C",
     "timezone": "Asia/Shanghai",
     "region": "asia"
@@ -371,8 +371,8 @@
   "chongqing": {
     "name": "Chongqing",
     "icao": "ZUCK",
-    "lat": 29.7192,
-    "lon": 106.6417,
+    "lat": 29.712254,
+    "lon": 106.651895,
     "unit": "C",
     "timezone": "Asia/Shanghai",
     "region": "asia"
@@ -381,7 +381,7 @@
     "name": "Singapore",
     "icao": "WSSS",
     "lat": 1.3502,
-    "lon": 103.9940,
+    "lon": 103.994,
     "unit": "C",
     "timezone": "Asia/Singapore",
     "region": "asia"
