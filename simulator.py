@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Optional
 
 from config import BANKROLL, DATA_DIR
+from data_sources import firestore_db
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +27,17 @@ class Simulator:
         return DATA_DIR / "simulator_state.json"
 
     def _load_state(self):
+        # Try Firestore first (survives redeploys)
+        fs_data = firestore_db.get_state()
+        if fs_data is not None:
+            self.balance = fs_data.get("balance", self.starting_bankroll)
+            self.starting_bankroll = fs_data.get("starting_bankroll", self.starting_bankroll)
+            self.open_positions = fs_data.get("open_positions", {})
+            self.closed_positions = fs_data.get("closed_positions", [])
+            logger.info("Loaded state from Firestore (%d open positions)", len(self.open_positions))
+            return
+
+        # Fall back to local file
         path = self._state_path()
         if path.exists():
             try:
@@ -50,6 +62,11 @@ class Simulator:
             "closed_positions": self.closed_positions,
             "saved_at": datetime.now(timezone.utc).isoformat(),
         }
+
+        # Write to Firestore (survives redeploys)
+        firestore_db.save_state(data)
+
+        # Also write locally (fast reads, fallback if Firestore is down)
         self._state_path().write_text(
             json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8"
         )
