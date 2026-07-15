@@ -555,17 +555,18 @@ def scan_recommendations() -> list[dict]:
                 continue
             threshold = _compute_threshold(wc_high, t_low, t_high)
             distance = abs(wc_high - threshold)
+            min_dist = 3.6 if unit == "F" else 2.0
             no_price = bucket["no_price"]
             if no_price > 0.92:
                 continue
-            if distance < 2.0:
+            if distance < min_dist:
                 continue
             if no_price < 0.01:
                 continue
             if om_high is not None:
                 om_threshold = _compute_threshold(om_high, t_low, t_high)
                 om_distance = abs(om_high - om_threshold)
-                if om_distance < 2.0:
+                if om_distance < min_dist:
                     continue
             link = build_event_link(slug, target_date)
             results.append({
@@ -585,6 +586,7 @@ def scan_recommendations() -> list[dict]:
                 "question": bucket["question"],
                 "link": link,
                 "region": station.get("region", ""),
+                "icao": station.get("icao", ""),
             })
     results.sort(key=lambda r: -r["distance"])
     seen_cities: set[str] = set()
@@ -644,26 +646,6 @@ def _send_rec_alerts(recs: list[dict]):
             prev_price = prev.get("no_price", 1.0)
             if r["no_price"] >= prev_price - 0.02:
                 continue
-        unit_char = "F" if r.get("wc_high") and r["city_slug"] in _stations and _stations[r["city_slug"]].get("unit") == "F" else "C"
-        bucket_label = f"{int(r['threshold'])}°{unit_char}"
-        if r["bucket_low"] == -999:
-            bucket_label = f"≤{int(r['bucket_high'])}°{unit_char}"
-        elif r["bucket_high"] == 999:
-            bucket_label = f"≥{int(r['bucket_low'])}°{unit_char}"
-        elif r["bucket_low"] == r["bucket_high"]:
-            bucket_label = f"{int(r['bucket_low'])}°{unit_char}"
-        else:
-            bucket_label = f"{int(r['bucket_low'])}-{int(r['bucket_high'])}°{unit_char}"
-        msg = (
-            f"\U0001f7e2 <b>NEW BUY RECOMMENDATION</b>\n\n"
-            f"<b>{r['city']}</b> | {bucket_label} | {r['date']}\n"
-            f"NO Price: ${r['no_price']:.3f} | Distance: {r['distance']:.1f}°\n"
-            f"WC High: {r['wc_high']:.1f}°{unit_char}"
-        )
-        if r["om_high"] is not None:
-            msg += f" | OM High: {r['om_high']:.1f}°C"
-        msg += f"\nVolume: {r['volume']:.0f}\n\n{r['link']}"
-        send_telegram(msg)
         _rec_state[key] = {
             "no_price": r["no_price"],
             "alerted_at": datetime.now(timezone.utc).isoformat(),
@@ -1113,8 +1095,8 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); }
     </div>
   </div>
   <div class="summary" id="summary"></div>
-  <div id="recs"></div>
   <div id="content"><div class="loading"><div class="spinner"></div><div>Loading...</div></div></div>
+  <div id="recs"></div>
 </div>
 <script>
 let refreshing = false;
@@ -1221,14 +1203,16 @@ function renderRecs(recs) {
     else if (r.bucket_high === 999) bLabel = '\u2265' + Math.round(r.bucket_low) + '\u00b0' + unitChar;
     else if (r.bucket_low === r.bucket_high) bLabel = Math.round(r.bucket_low) + '\u00b0' + unitChar;
     else bLabel = Math.round(r.bucket_low) + '-' + Math.round(r.bucket_high) + '\u00b0' + unitChar;
-    const dClass = r.distance >= 4.0 ? 'rec-dist-close' : 'rec-dist-ok';
+    const dClass = r.distance >= 5.0 ? 'rec-dist-close' : 'rec-dist-ok';
+    const distUnit = r.region === 'americas' ? '°F' : '°C';
     const omHi = r.om_high !== null ? r.om_high.toFixed(1) + '\u00b0' + unitChar : nd;
+    const icao = r.icao ? '<span class="card-icao">' + r.icao + '</span>' : '';
     html += '<div class="rec-card">' +
-      '<div class="rec-top"><div><span class="rec-city">' + r.city + '<span class="rec-region">' + r.region + '</span></span>' +
+      '<div class="rec-top"><div><span class="rec-city">' + r.city + icao + '<span class="rec-region">' + r.region + '</span></span>' +
       '<div class="rec-date">' + r.date + '</div></div>' +
       '<div class="rec-bucket">' + bLabel + '</div></div>' +
       '<div class="rec-row"><span class="rec-row-label">NO Price</span><span class="rec-row-val rec-price">$' + r.no_price.toFixed(3) + '</span></div>' +
-      '<div class="rec-row"><span class="rec-row-label">Distance</span><span class="rec-row-val rec-dist ' + dClass + '">' + r.distance.toFixed(1) + '\u00b0</span></div>' +
+      '<div class="rec-row"><span class="rec-row-label">Distance</span><span class="rec-row-val rec-dist ' + dClass + '">' + r.distance.toFixed(1) + distUnit + '</span></div>' +
       '<div class="rec-row"><span class="rec-row-label">WC High</span><span class="rec-row-val t-wc">' + r.wc_high.toFixed(1) + '\u00b0</span></div>' +
       '<div class="rec-row"><span class="rec-row-label">OM High</span><span class="rec-row-val t-om">' + omHi + '</span></div>' +
       '<div class="rec-row"><span class="rec-row-label">Volume</span><span class="rec-row-val">' + Math.round(r.volume) + '</span></div>' +
